@@ -1,1 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Experimental | Sophia Marinova</title>
+
+  <!-- reuse your main styles (btn, layers, type, etc.) -->
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* Page-specific tweaks */
+    .container { max-width: 980px; margin: 0 auto; padding: 48px 20px; text-align: center; }
+    h1 { font-size: clamp(28px,4vw,40px); margin:18px 0 10px; }
+    p.lead { margin: 0 0 24px; opacity: .95; }
+    .cta { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <!-- Hydra background -->
+  <canvas id="hydra-bg"></canvas>
+  <div class="backdrop"></div>
+
+  <main class="container">
+    <h1>Experimental</h1>
+    <p class="lead">Play with visuals. Toggle DJ Mode for a more energetic look.</p>
+
+    <div class="cta">
+      <button id="djBtn" class="btn">DJ Mode</button>
+    </div>
+  </main>
+
+  <!-- Hydra synth -->
+  <script src="https://unpkg.com/hydra-synth"></script>
+  <script>
+    // Size canvases to pixel-perfect viewport (no 2D context on Hydra!)
+    function fitCanvas(c){
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      c.width  = Math.floor(innerWidth  * dpr);
+      c.height = Math.floor(innerHeight * dpr);
+      c.style.width  = innerWidth + 'px';
+      c.style.height = innerHeight + 'px';
+    }
+
+    const hydraCanvas = document.getElementById('hydra-bg');
+    fitCanvas(hydraCanvas);
+    addEventListener('resize', () => fitCanvas(hydraCanvas));
+
+    let isDJ = false;
+
+    // two scene presets
+    function sceneCalm(){
+      const kCount = () => 4 + Math.floor(2 * Math.abs(Math.sin((window.time||0) * 0.35)));
+      osc(0.9, 0.45, 4.8)
+        .kaleid(kCount)
+        .diff(osc(0.9, 0.45, 4.8))
+        .modulateScale(osc(1.8, -0.22, 1))
+        .saturate(0.6)
+        .contrast(0.85)
+        .brightness(0.2)
+        .color(1.08, 1.08, 1.12) // soft pastel bias
+        .out();
+    }
+
+    function sceneDJ(){
+      const kCount = () => 5 + Math.floor(2 * Math.abs(Math.sin((window.time||0) * 0.8)));
+      osc(1.6, 0.6, 8)                    // faster osc, more motion
+        .kaleid(kCount)
+        .diff(osc(2.2, 0.5, 9))
+        .modulate(osc(3.0, -0.15, 1.2))
+        .saturate(1.2)
+        .contrast(1.05)
+        .brightness(0.1)
+        .hue( () => Math.sin((window.time||0) * 0.12) * 0.3 ) // slow hue drift
+        .color(1.25, 1.05, 0.9) // warm “club” tint
+        .out();
+    }
+
+    (async () => {
+      try {
+        if (window.initHydra) {
+          // If Strudel is present in this page/session
+          await window.initHydra({ feedStrudel: 1, canvas: hydraCanvas });
+        } else {
+          // Plain Hydra instance
+          const hydra = new Hydra({ canvas: hydraCanvas, detectAudio:false });
+        }
+        // start calm
+        sceneCalm();
+      } catch (e) {
+        console.warn('Hydra init failed:', e);
+      }
+    })();
+
+    // Button toggles
+    const btn = document.getElementById('djBtn');
+    btn.addEventListener('click', () => {
+      isDJ = !isDJ;
+      if (isDJ) {
+        sceneDJ();
+        btn.textContent = 'DJ Mode: ON';
+      } else {
+        sceneCalm();
+        btn.textContent = 'DJ Mode';
+      }
+    });
+  </script>
+</body>
+</html>
 
