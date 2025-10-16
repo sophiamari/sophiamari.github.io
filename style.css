@@ -111,20 +111,40 @@ h1.typewriter::after {
 
 /* ===== Avatar (PNG) + Thought bubble ===== */
 /* Inline, centered avatar under the hero text */
+/* Inline, centered avatar under the hero text */
 .avatar-inline{
   display: inline-block;
-  margin: 18px auto 20px;
+  margin: 18px auto 20px;   /* space above/below */
   text-decoration: none;
   color: inherit;
   cursor: pointer;
 }
-.avatar-wrapper { position: relative; display: inline-block; }
-.avatar-inline .avatar-animated{ width:160px; height:160px; }
+
+/* Wrapper must be relative so the bubble can be absolutely positioned */
+.avatar-wrapper { 
+  position: relative; 
+  display: inline-block; 
+}
+
+/* Avatar size */
+.avatar-inline .avatar-animated{ 
+  width:160px; 
+  height:160px; 
+}
+
+/* Bubble default position (hidden by opacity in your base .thought-bubble rules) */
 .avatar-inline .thought-bubble{
-  top:-90px; right:0; left:50%;
+  top:-90px; 
+  right:0; 
+  left:50%;
   transform: translate(-10%, 6px);
 }
-.avatar-inline:hover .thought-bubble{ opacity:1; transform: translate(-10%, 0); }
+
+/* Show bubble on hover */
+.avatar-inline:hover .thought-bubble{ 
+  opacity:1; 
+  transform: translate(-10%, 0); 
+}
 
 
 /* Buttons row spacing/centering under avatar */
