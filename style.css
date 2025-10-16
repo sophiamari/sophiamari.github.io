@@ -110,13 +110,26 @@ h1.typewriter::after {
 .certificate p { color: #555; margin: 5px 0; line-height: 1.4; }
 
 /* ===== Avatar (PNG) + Thought bubble ===== */
-.avatar-bubble{
-  position: fixed; right: 40px; bottom: 40px;
-  z-index: 5; /* above all other layers */
-  text-decoration: none; color: inherit; cursor: pointer;
-  animation: floaty 5s ease-in-out infinite;
-  transform-origin: center;
+/* Inline, centered avatar under the hero text */
+.avatar-inline{
+  display: inline-block;
+  margin: 18px auto 20px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
+.avatar-wrapper { position: relative; display: inline-block; }
+.avatar-inline .avatar-animated{ width:160px; height:160px; }
+.avatar-inline .thought-bubble{
+  top:-90px; right:0; left:50%;
+  transform: translate(-10%, 6px);
+}
+.avatar-inline:hover .thought-bubble{ opacity:1; transform: translate(-10%, 0); }
+
+/* Buttons row spacing/centering under avatar */
+.hero-buttons{ margin-top:18px; justify-content:center; gap:14px; }
+.hero-buttons .btn{ min-width:150px; }
+
 .avatar-wrapper{ position: relative; }
 .avatar-animated{
   width: 140px; height: 140px;
@@ -127,7 +140,6 @@ h1.typewriter::after {
   background: rgba(255,255,255,0.6);
   transition: transform .2s ease;
 }
-.avatar-bubble:hover .avatar-animated{ transform: scale(1.05); }
 
 .thought-bubble{
   position: absolute; top: -86px; right: 120px;
@@ -144,9 +156,7 @@ h1.typewriter::after {
   width:20px; height:20px; background:#fff; border-radius:50%;
   box-shadow:-10px 10px 0 #fff;
 }
-.avatar-bubble:hover .thought-bubble{ opacity:1; transform: translateY(0); }
 
 /* Float animation + touch/reduced-motion */
-@keyframes floaty{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @media (hover:none){ .thought-bubble{ opacity:1; transform:none; } }
 @media (prefers-reduced-motion: reduce){ .avatar-bubble{ animation:none; } }

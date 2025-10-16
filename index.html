@@ -59,16 +59,27 @@ html, body { height: 100%; }
   <canvas id="draw-overlay"></canvas>
 
   <main class="container">
-    <h1 id="title" class="typewriter" aria-live="polite"></h1>
-    <p class="lead">Hi, I’m Sophia Marinova, a Computer Science student at ASU.</p>
+  <h1 id="title" class="typewriter" aria-live="polite"></h1>
+  <p class="lead">Hi, I’m Sophia Marinova, a Computer Science student at ASU.</p>
 
-    <div class="button-row">
-      <a class="btn" href="about.html">About Me</a>
-      <a class="btn" href="projects.html">Projects</a>
-      <a class="btn" href="experimental.html">Experimental</a>
-      <a class="btn" href="certificates.html">Certificates</a>
+  <!-- Inline avatar under the hero text -->
+  <a href="about.html" class="avatar-inline" title="Go to About Me" aria-label="Go to About Me">
+    <div class="avatar-wrapper">
+      <img src="images/me-avatar.png" alt="Sophia's avatar" class="avatar-animated">
+      <div class="thought-bubble">
+        <p>Want to know about me!?<br><strong>Click here</strong> 💭</p>
+      </div>
     </div>
-  </main>
+  </a>
+
+  <!-- Only the three buttons, centered -->
+  <div class="button-row hero-buttons">
+    <a class="btn" href="projects.html">Projects</a>
+    <a class="btn" href="experimental.html">Experimental</a>
+    <a class="btn" href="certificates.html">Certificates</a>
+  </div>
+</main>
+
 
 <a href="about.html" class="avatar-bubble" title="Go to About Me">
   <div class="avatar-wrapper">
@@ -231,14 +242,6 @@ html, body { height: 100%; }
 })();
   </script>
 
-  <a href="about.html" class="avatar-bubble" title="Go to About Me" aria-label="Go to About Me">
-  <div class="avatar-wrapper">
-    <img src="images/me-avatar.png" alt="Sophia's avatar" class="avatar-animated">
-    <div class="thought-bubble">
-      <p>Want to know about me!?<br><strong>Click here</strong> 💭</p>
-    </div>
-  </div>
-</a>
 
 </body>
 </html>
