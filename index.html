@@ -111,11 +111,16 @@ html, body { height: 100%; }
       } else {
         const hydra = new Hydra({ canvas: hydraCanvas, detectAudio: false });
         const kCount = () => 4 + Math.floor(2 * Math.abs(Math.sin((window.time || 0) * 0.35)));
-        osc(1, 0.5, 5)
-          .kaleid(kCount)
-          .diff(osc(1, 0.5, 5))
-          .modulateScale(osc(2, -0.25, 1))
-          .out();
+        osc(0.8, 0.4, 4.5)
+  .kaleid(kCount)
+  .diff(osc(1, 0.4, 4.8))
+  .modulateScale(osc(1.6, -0.22, 0.9))
+  .saturate(0.8)
+  .contrast(0.9)
+  .brightness(0.15)
+  .color(1.25, 1.05, 0.9) // push reds/oranges
+  .out();
+
       }
     } catch (e) {
       console.warn('Hydra init failed:', e);
