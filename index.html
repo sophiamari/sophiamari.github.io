@@ -4,21 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sophia Marinova | Portfolio</title>
+
+  <!-- Your main styles (pink buttons, fonts, typewriter CSS, etc.) -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Minimal page-specific styles for the Hydra background + layout -->
   <style>
     :root{
-      --pink:#ec4899;       /* base pink */
-      --pink-dark:#db2777;  /* hover */
-      --pink-ring: rgba(236,72,153,.35);
-      --text:#0f172a; /* slate-900 */
+      --text:#0f172a;
     }
-
-    /* Reset */
-    *,*::before,*::after{box-sizing:border-box}
-    html,body{height:100%;}
+    *,*::before,*::after{ box-sizing: border-box; }
+    html,body{ height:100%; }
     body{
       margin:0;
       color:var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
       overflow:hidden; /* so the hydra canvas fills perfectly */
     }
 
@@ -30,7 +29,9 @@
     /* Subtle veil over hydra to increase legibility */
     .backdrop{
       position:fixed; inset:0; z-index:-1;
-      background: radial-gradient(1000px 600px at 50% 5%, rgba(255,255,255,.25), rgba(255,255,255,.12) 40%, rgba(255,255,255,.06) 70%, rgba(255,255,255,0) 100%);
+      background: radial-gradient(1000px 600px at 50% 5%,
+        rgba(255,255,255,.25), rgba(255,255,255,.12) 40%,
+        rgba(255,255,255,.06) 70%, rgba(255,255,255,0) 100%);
       pointer-events:none;
     }
 
@@ -44,19 +45,11 @@
       max-width:980px; margin:0 auto; padding:48px 20px; text-align:center;
     }
 
+    /* Fallback h1 size if not set in style.css */
     h1{font-size:clamp(28px,4vw,40px); margin:18px 0 8px;}
     p.lead{margin:0 0 28px; opacity:.95}
 
     .button-row{display:flex; gap:16px; flex-wrap:wrap; justify-content:center}
-    .btn{
-      appearance:none; border:0; cursor:pointer; border-radius:999px; padding:12px 20px; font-weight:600; letter-spacing:.2px;
-      background:var(--pink); color:white; box-shadow:0 8px 18px -8px var(--pink-ring);
-      transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
-    }
-    .btn:hover{background:var(--pink-dark); transform:translateY(-1px); box-shadow:0 12px 24px -10px var(--pink-ring)}
-    .btn:active{transform:translateY(0)}
-
-    /* Make room on small screens */
     @media (max-width:600px){ .container{padding-top:36px} }
   </style>
 </head>
@@ -64,11 +57,12 @@
   <!-- Hydra background -->
   <canvas id="hydra-bg"></canvas>
   <div class="backdrop"></div>
+
   <!-- Cursor drawing overlay -->
   <canvas id="draw-overlay"></canvas>
 
   <main class="container">
-    <h1>Welcome to My Portfolio</h1>
+    <h1 id="title" class="typewriter" aria-live="polite"></h1>
     <p class="lead">Hi, I’m Sophia Marinova, a Computer Science student at ASU.</p>
 
     <div class="button-row">
@@ -99,32 +93,34 @@
     fitCanvas(drawCanvas);
     addEventListener('resize', () => { fitCanvas(hydraCanvas); fitCanvas(drawCanvas); });
 
-    // HYDRA: initialize and run a kaleidoscopic color-flow similar to the snippet you sent.
-    // If Strudel's initHydra is present, use it (feedStrudel:1). Otherwise, create plain Hydra.
+    // HYDRA: initialize and run a kaleidoscopic color-flow.
     (async () => {
       try{
         if (window.initHydra) {
+          // If Strudel is present
           await window.initHydra({ feedStrudel: 1, canvas: hydraCanvas });
         } else {
           // Plain Hydra instance
           const hydra = new Hydra({ canvas: hydraCanvas, detectAudio:false });
           // A time-varying kaleidoscope count (cycles between 4–6)
-          const kCount = () => 4 + Math.floor(2 * Math.abs(Math.sin(time * 0.35)));
+          const kCount = () => 4 + Math.floor(2 * Math.abs(Math.sin((window.time || 0) * 0.35)));
 
           osc(1, 0.5, 5)                // base field
-            .kaleid(kCount)            // ~ H("<4 5 6>") equivalent
+            .kaleid(kCount)             // similar to H("<4 5 6>")
             .diff(osc(1, 0.5, 5))
             .modulateScale(osc(2, -0.25, 1))
             .out();
         }
-      }catch(e){ console.warn('Hydra init failed:', e); }
+      } catch(e){
+        console.warn('Hydra init failed:', e);
+      }
     })();
 
     // CURSOR PENCIL TRAIL — lightweight, pressure-ish stroke with a soft fade
     (function pencilTrail(){
       const ctx = drawCanvas.getContext('2d');
       let last = null; // last mouse position
-      let drawing = false; // draw only when moving (so mobile taps don't flood)
+      let drawing = false; // only fade when drawing happened
 
       // Style for a pencil-y look
       ctx.lineCap = 'round';
@@ -142,8 +138,8 @@
       let lastT = 0;
       function onMove(e){
         const t = e.touches ? e.touches[0] : e;
-        const x = (t.clientX);
-        const y = (t.clientY);
+        const x = t.clientX;
+        const y = t.clientY;
         const now = performance.now();
         const dt = Math.max(16, now - lastT);
         lastT = now;
@@ -151,7 +147,7 @@
         if (last){
           const dx = x - last.x; const dy = y - last.y;
           const speed = Math.hypot(dx,dy) / dt; // px per ms
-          const w = Math.max(1.5, Math.min(6, 6 - speed*8)); // thinner when moving faster
+          const w = Math.max(1.5, Math.min(6, 6 - speed*8)); // thinner when faster
 
           ctx.strokeStyle = 'rgba(30,30,30,0.9)';
           ctx.lineWidth = w;
@@ -182,5 +178,31 @@
       loop();
     })();
   </script>
+
+  <!-- TYPEWRITER: placed at the very end (Option A) -->
+  <script>
+    (function(){
+      const el = document.getElementById('title');
+      if (!el) return; // safety
+
+      const text = "Welcome to My Portfolio";
+      const speed = 50; // ms per character
+      let i = 0;
+
+      function type() {
+        if (i <= text.length) {
+          el.textContent = text.slice(0, i++);
+          setTimeout(type, speed);
+        }
+      }
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        el.textContent = text;
+      } else {
+        type();
+      }
+    })();
+  </script>
 </body>
 </html>
+
