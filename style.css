@@ -115,3 +115,76 @@ body { background: transparent !important; }
   margin-top: 40px;
   display: inline-block;
 }
+
+/* Floating Avatar with Thought Bubble */
+.avatar-bubble {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  z-index: 5; /* above all canvas layers */
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  animation: floaty 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Avatar image */
+.avatar-animated {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.75);
+  box-shadow: 0 10px 24px -8px rgba(0,0,0,0.4);
+  transition: transform .2s ease;
+}
+
+/* Hover zoom */
+.avatar-bubble:hover .avatar-animated {
+  transform: scale(1.05);
+}
+
+/* Thought bubble */
+.thought-bubble {
+  position: absolute;
+  top: -80px;
+  right: 120px;
+  background: white;
+  border-radius: 20px;
+  padding: 10px 16px;
+  box-shadow: 0 8px 20px -6px rgba(0,0,0,0.25);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px;
+  line-height: 1.3;
+  color: #0f172a;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.4s ease;
+}
+
+/* Bubble tail */
+.thought-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 85%;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: -10px 10px 0 white;
+}
+
+/* Show the bubble when hovering */
+.avatar-bubble:hover .thought-bubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Gentle floating animation */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
+

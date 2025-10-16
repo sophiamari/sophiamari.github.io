@@ -31,9 +31,6 @@ html, body { height: 100%; }
   width: 100vw;
   height: 100vh;
   }
-
-  
-
     /* Pencil/ink drawing overlay */
     #draw-overlay{
       position:fixed; inset:0; z-index:10; pointer-events:none; /* drawing is programmatic only */
@@ -53,6 +50,16 @@ html, body { height: 100%; }
   </style>
 </head>
 <body>
+  <!-- Animated Avatar with Thought Bubble -->
+<a href="about.html" class="avatar-bubble" title="Go to About Me">
+  <div class="avatar-wrapper">
+    <img src="images/me-avatar.png" alt="Sophia's avatar" class="avatar-animated">
+    <div class="thought-bubble">
+      <p>Want to know about me!?<br><strong>Click here</strong> 💭</p>
+    </div>
+  </div>
+</a>
+
   <!-- Hydra background -->
   <canvas id="hydra-bg"></canvas>
   <div class="backdrop"></div>
@@ -222,6 +229,16 @@ html, body { height: 100%; }
   }
 })();
   </script>
+
+  <a href="about.html" class="avatar-bubble" title="Go to About Me" aria-label="Go to About Me">
+  <div class="avatar-wrapper">
+    <img src="images/me-avatar.png" alt="Sophia's avatar" class="avatar-animated">
+    <div class="thought-bubble">
+      <p>Want to know about me!?<br><strong>Click here</strong> 💭</p>
+    </div>
+  </div>
+</a>
+
 </body>
 </html>
 
