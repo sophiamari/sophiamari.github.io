@@ -126,6 +126,7 @@ h1.typewriter::after {
 }
 .avatar-inline:hover .thought-bubble{ opacity:1; transform: translate(-10%, 0); }
 
+
 /* Buttons row spacing/centering under avatar */
 .hero-buttons{ margin-top:18px; justify-content:center; gap:14px; }
 .hero-buttons .btn{ min-width:150px; }
