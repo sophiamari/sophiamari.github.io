@@ -182,26 +182,37 @@
   <!-- TYPEWRITER: placed at the very end (Option A) -->
   <script>
     (function(){
-      const el = document.getElementById('title');
-      if (!el) return; // safety
+  const el = document.getElementById('title');
+  if (!el) return;
 
-      const text = "Welcome to My Portfolio";
-      const speed = 50; // ms per character
-      let i = 0;
+  const text = "Welcome to My Portfolio";
+  let i = 0;
 
-      function type() {
-        if (i <= text.length) {
-          el.textContent = text.slice(0, i++);
-          setTimeout(type, speed);
-        }
-      }
+  function delayFor(ch){
+    // base speed
+    let d = 110;                 // bump this up/down to globally slow/fast
+    if (ch === ' ') d += 80;     // tiny pause on spaces
+    if (/[.,!?]/.test(ch)) d += 220; // longer pause on punctuation
+    // small humanized randomness (±30ms)
+    d += Math.floor(Math.random()*60) - 30;
+    return Math.max(40, d);
+  }
 
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        el.textContent = text;
-      } else {
-        type();
-      }
-    })();
+  function type(){
+    if (i <= text.length){
+      el.textContent = text.slice(0, i);
+      const nextCh = text[i] || '';
+      i++;
+      setTimeout(type, delayFor(nextCh));
+    }
+  }
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.textContent = text;
+  } else {
+    type();
+  }
+})();
   </script>
 </body>
 </html>
