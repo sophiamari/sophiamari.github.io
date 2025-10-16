@@ -10,21 +10,27 @@
 
   <!-- Minimal page-specific styles for the Hydra background + layout -->
   <style>
-    :root{
-      --text:#0f172a;
-    }
-    *,*::before,*::after{ box-sizing: border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      color:var(--text);
-      overflow:hidden; /* so the hydra canvas fills perfectly */
-    }
+    :root { --text:#0f172a; }
 
-    /* Hydra background canvas */
-    #hydra-bg{
-      position:fixed; inset:0; z-index:-2; display:block; width:100vw; height:100vh;
-    }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+
+  body{
+  margin: 0;
+  color: var(--text);
+  background: transparent !important;  /* <-- key: no solid bg */
+  overflow: hidden;                     /* hydra fills viewport */
+  }
+
+  /* Make Hydra visible and layered correctly */
+  #hydra-bg{
+  position: fixed;
+  inset: 0;
+  z-index: 0;          /* was negative; bring it above page bg */
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  }
 
     /* Subtle veil over hydra to increase legibility */
     .backdrop{
@@ -74,112 +80,116 @@
   </main>
 
   <!-- Hydra synth (background visuals) -->
-  <script src="https://unpkg.com/hydra-synth"></script>
-  <script>
-    // Size canvases to pixel-perfect viewport
-    function fitCanvas(c){
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      c.width = Math.floor(innerWidth * dpr);
-      c.height = Math.floor(innerHeight * dpr);
-      c.style.width = innerWidth + 'px';
-      c.style.height = innerHeight + 'px';
+ <!-- Hydra synth (background visuals) -->
+<script src="https://unpkg.com/hydra-synth"></script>
+
+<script>
+  // Size canvases to pixel-perfect viewport.
+  // Only request a 2D context when needed.
+  function fitCanvas(c, use2d){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width  = Math.floor(innerWidth  * dpr);
+    c.height = Math.floor(innerHeight * dpr);
+    c.style.width  = innerWidth + 'px';
+    c.style.height = innerHeight + 'px';
+    if (use2d) {
       const ctx = c.getContext('2d');
       if (ctx) ctx.setTransform(dpr,0,0,dpr,0,0);
     }
+  }
 
-    const hydraCanvas = document.getElementById('hydra-bg');
-    const drawCanvas = document.getElementById('draw-overlay');
-    fitCanvas(hydraCanvas);
-    fitCanvas(drawCanvas);
-    addEventListener('resize', () => { fitCanvas(hydraCanvas); fitCanvas(drawCanvas); });
+  const hydraCanvas = document.getElementById('hydra-bg');
+  const drawCanvas  = document.getElementById('draw-overlay');
 
-    // HYDRA: initialize and run a kaleidoscopic color-flow.
-    (async () => {
-      try{
-        if (window.initHydra) {
-          // If Strudel is present
-          await window.initHydra({ feedStrudel: 1, canvas: hydraCanvas });
-        } else {
-          // Plain Hydra instance
-          const hydra = new Hydra({ canvas: hydraCanvas, detectAudio:false });
-          // A time-varying kaleidoscope count (cycles between 4–6)
-          const kCount = () => 4 + Math.floor(2 * Math.abs(Math.sin((window.time || 0) * 0.35)));
+  // ✅ Do NOT create a 2D context on the Hydra canvas
+  fitCanvas(hydraCanvas, false);
+  fitCanvas(drawCanvas,  true);
 
-          osc(1, 0.5, 5)                // base field
-            .kaleid(kCount)             // similar to H("<4 5 6>")
-            .diff(osc(1, 0.5, 5))
-            .modulateScale(osc(2, -0.25, 1))
-            .out();
+  addEventListener('resize', () => {
+    fitCanvas(hydraCanvas, false);
+    fitCanvas(drawCanvas,  true);
+  });
+
+  // HYDRA: initialize and run a kaleidoscopic color flow
+  (async () => {
+    try {
+      if (window.initHydra) {
+        await window.initHydra({ feedStrudel: 1, canvas: hydraCanvas });
+      } else {
+        const hydra = new Hydra({ canvas: hydraCanvas, detectAudio: false });
+        const kCount = () => 4 + Math.floor(2 * Math.abs(Math.sin((window.time || 0) * 0.35)));
+        osc(1, 0.5, 5)
+          .kaleid(kCount)
+          .diff(osc(1, 0.5, 5))
+          .modulateScale(osc(2, -0.25, 1))
+          .out();
+      }
+    } catch (e) {
+      console.warn('Hydra init failed:', e);
+    }
+  })();
+</script>
+
+<!-- Cursor pencil trail -->
+<script>
+  (function pencilTrail(){
+    const ctx = drawCanvas.getContext('2d');
+    let last = null;
+    let drawing = false;
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    function fade(){
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.globalAlpha = 0.06;
+      ctx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
+      ctx.restore();
+    }
+
+    let lastT = 0;
+    function onMove(e){
+      const t = e.touches ? e.touches[0] : e;
+      const x = t.clientX, y = t.clientY;
+      const now = performance.now();
+      const dt = Math.max(16, now - lastT);
+      lastT = now;
+
+      if (last){
+        const dx = x - last.x, dy = y - last.y;
+        const speed = Math.hypot(dx,dy) / dt;
+        const w = Math.max(1.5, Math.min(6, 6 - speed*8));
+        ctx.strokeStyle = 'rgba(30,30,30,0.9)';
+        ctx.lineWidth = w;
+
+        for (let i=0;i<2;i++){
+          const jx = (Math.random()-0.5)*0.6;
+          const jy = (Math.random()-0.5)*0.6;
+          ctx.beginPath();
+          ctx.moveTo(last.x + jx, last.y + jy);
+          ctx.lineTo(x + jx, y + jy);
+          ctx.stroke();
         }
-      } catch(e){
-        console.warn('Hydra init failed:', e);
       }
-    })();
+      last = {x,y};
+      drawing = true;
+    }
 
-    // CURSOR PENCIL TRAIL — lightweight, pressure-ish stroke with a soft fade
-    (function pencilTrail(){
-      const ctx = drawCanvas.getContext('2d');
-      let last = null; // last mouse position
-      let drawing = false; // only fade when drawing happened
+    function stop(){ last = null; drawing = false; }
 
-      // Style for a pencil-y look
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+    addEventListener('mousemove', onMove, {passive:true});
+    addEventListener('touchmove', onMove, {passive:true});
+    addEventListener('mouseleave', stop);
+    addEventListener('touchend', stop);
 
-      function fade(){
-        // Gently fade previous strokes to mimic graphite
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.globalAlpha = 0.06;   // lower = longer persistence
-        ctx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
-        ctx.restore();
-      }
+    function loop(){ if(drawing) fade(); requestAnimationFrame(loop); }
+    loop();
+  })();
+</script>
 
-      let lastT = 0;
-      function onMove(e){
-        const t = e.touches ? e.touches[0] : e;
-        const x = t.clientX;
-        const y = t.clientY;
-        const now = performance.now();
-        const dt = Math.max(16, now - lastT);
-        lastT = now;
 
-        if (last){
-          const dx = x - last.x; const dy = y - last.y;
-          const speed = Math.hypot(dx,dy) / dt; // px per ms
-          const w = Math.max(1.5, Math.min(6, 6 - speed*8)); // thinner when faster
-
-          ctx.strokeStyle = 'rgba(30,30,30,0.9)';
-          ctx.lineWidth = w;
-
-          // slight texture by drawing multiple micro-strokes with small jitter
-          for (let i=0;i<2;i++){
-            const jx = (Math.random()-0.5)*0.6;
-            const jy = (Math.random()-0.5)*0.6;
-            ctx.beginPath();
-            ctx.moveTo(last.x + jx, last.y + jy);
-            ctx.lineTo(x + jx, y + jy);
-            ctx.stroke();
-          }
-        }
-        last = {x,y};
-        drawing = true;
-      }
-
-      function stop(){ last = null; drawing=false; }
-
-      addEventListener('mousemove', onMove, {passive:true});
-      addEventListener('touchmove', onMove, {passive:true});
-      addEventListener('mouseleave', stop);
-      addEventListener('touchend', stop);
-
-      // animation loop for fading
-      function loop(){ if(drawing) fade(); requestAnimationFrame(loop); }
-      loop();
-    })();
-  </script>
-
-  <!-- TYPEWRITER: placed at the very end (Option A) -->
+  <!-- TYPEWRITER:  -->
   <script>
     (function(){
   const el = document.getElementById('title');
