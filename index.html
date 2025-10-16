@@ -36,8 +36,8 @@ html, body { height: 100%; }
     .backdrop{
       position:fixed; inset:0; z-index:-1;
       background: radial-gradient(1000px 600px at 50% 5%,
-        rgba(255,255,255,.25), rgba(255,255,255,.12) 40%,
-        rgba(255,255,255,.06) 70%, rgba(255,255,255,0) 100%);
+        rgba(255,255,255,.45), rgba(255,255,255,.22) 40%,
+        rgba(255,255,255,.12) 70%, rgba(255,255,255,0) 100%);
       pointer-events:none;
     }
 
@@ -101,7 +101,7 @@ html, body { height: 100%; }
   const hydraCanvas = document.getElementById('hydra-bg');
   const drawCanvas  = document.getElementById('draw-overlay');
 
-  // ✅ Do NOT create a 2D context on the Hydra canvas
+
   fitCanvas(hydraCanvas, false);
   fitCanvas(drawCanvas,  true);
 
