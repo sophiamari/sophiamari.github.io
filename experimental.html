@@ -20,17 +20,17 @@
     #wave-canvas{
       display:block;
       width:min(720px, 92vw);
-      height:160px;               /* CSS height; JS will scale for DPR */
-      margin: 18px auto 8px;
-      background: rgba(255,255,255,0.65);
-      border-radius: 14px;
-      box-shadow: 0 12px 28px -16px rgba(0,0,0,.35);
+      height:160px;                 /* CSS height; JS scales for DPR */
+      margin:18px auto 8px;
+      background:#000;              /* black background */
+      border-radius:14px;
+      /* soft pink glow & inner ring */
+      box-shadow: 0 12px 28px -16px rgba(236,72,153,.55), 0 0 0 1px rgba(236,72,153,.25) inset;
     }
 
-    /* Small caption under the canvas */
     .hint { font-size: 13px; opacity: .8; margin-top: 4px; }
 
-    /* Make the file input look decent */
+    /* Pretty file input */
     .file {
       display: inline-block;
       background: #fff;
@@ -157,15 +157,16 @@
     let audioCtx, srcNode, analyser, dataArray, rafId;
     let isDJ = false;
 
+    const WAVE_GAIN = 1.8; // expand amplitude (1.0 = normal)
     function ensureAudioGraph(){
       if (audioCtx) return;
       audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
       srcNode   = audioCtx.createMediaElementSource(audioEl);
       analyser  = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;            // higher = smoother waveform
-      const bufferLen = analyser.frequencyBinCount; // 1024
+      analyser.fftSize = 4096;                 // smoother line
+      analyser.smoothingTimeConstant = 0.85;   // mellow motion
+      const bufferLen = analyser.frequencyBinCount;
       dataArray = new Uint8Array(bufferLen);
-      // Connect graph: <audio> -> analyser -> speakers
       srcNode.connect(analyser);
       analyser.connect(audioCtx.destination);
     }
@@ -174,19 +175,16 @@
       analyser.getByteTimeDomainData(dataArray);
       const w = waveCanvas.width;
       const h = waveCanvas.height;
+      const center = h / 2;
 
-      // clear bg
+      // clear panel (we keep black via CSS; no fill needed)
       wCtx.clearRect(0,0,w,h);
 
-      // subtle glass panel
-      wCtx.fillStyle = 'rgba(255,255,255,0.65)';
-      wCtx.fillRect(0,0,w,h);
-
-      // draw center baseline
+      // center baseline (subtle)
       wCtx.beginPath();
-      wCtx.moveTo(0, h/2);
-      wCtx.lineTo(w, h/2);
-      wCtx.strokeStyle = 'rgba(0,0,0,0.10)';
+      wCtx.moveTo(0, center);
+      wCtx.lineTo(w, center);
+      wCtx.strokeStyle = 'rgba(255,255,255,0.08)';
       wCtx.lineWidth = 1;
       wCtx.stroke();
 
@@ -194,14 +192,17 @@
       wCtx.beginPath();
       const slice = w / dataArray.length;
       for (let i=0; i<dataArray.length; i++){
-        const v = dataArray[i] / 128.0;       // 0..2
-        const y = (v * h/2);                  // center at h/2
+        const v = (dataArray[i] - 128) / 128;           // -1..+1 centered
+        const y = center + v * center * WAVE_GAIN;      // expand around center
         const x = i * slice;
         if (i === 0) wCtx.moveTo(x,y); else wCtx.lineTo(x,y);
       }
-      wCtx.lineWidth = 2.2;
-      wCtx.strokeStyle = 'rgba(236,72,153,0.95)'; // pink line
+      wCtx.lineWidth   = 3;
+      wCtx.strokeStyle = '#ff2aa1';                     // bright pink
+      wCtx.shadowColor = 'rgba(255,42,161,0.55)';       // glow
+      wCtx.shadowBlur  = 8;
       wCtx.stroke();
+      wCtx.shadowBlur  = 0;
 
       rafId = requestAnimationFrame(drawWave);
     }
@@ -214,12 +215,9 @@
     function stopViz(){
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
-      // keep last frame visible; clear if you prefer:
-      // wCtx.clearRect(0,0,waveCanvas.width, waveCanvas.height);
     }
 
-    // Load a default file if present (optional)
-    // Put a file at music/demo.mp3 if you want this to just work on Play.
+    // Default file (optional)
     audioEl.src = 'music/demo.mp3';
 
     // File picker
@@ -229,7 +227,6 @@
       const url = URL.createObjectURL(f);
       audioEl.src = url;
       fileLabel.textContent = f.name.length > 26 ? f.name.slice(0,23) + '…' : f.name;
-      // Reset UI
       pauseBtn.style.display = 'none';
       playBtn.style.display  = 'inline-block';
     });
@@ -254,7 +251,6 @@
       playBtn.style.display  = 'inline-block';
     });
 
-    // If audio ends, stop viz and reset buttons
     audioEl.addEventListener('ended', () => {
       stopViz();
       pauseBtn.style.display = 'none';
