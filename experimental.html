@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Experimental | Sophia Marinova</title>
 
-  <!-- reuse your main styles (btn, layers, type, etc.) -->
+  <!-- Reuse your main styles (Hydra layering, buttons, fonts, etc.) -->
   <link rel="stylesheet" href="style.css">
 
   <style>
@@ -13,7 +13,34 @@
     .container { max-width: 980px; margin: 0 auto; padding: 48px 20px; text-align: center; }
     h1 { font-size: clamp(28px,4vw,40px); margin:18px 0 10px; }
     p.lead { margin: 0 0 24px; opacity: .95; }
-    .cta { margin-top: 20px; }
+
+    .controls { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top: 16px; }
+
+    /* Waveform canvas sits above Hydra and below UI */
+    #wave-canvas{
+      display:block;
+      width:min(720px, 92vw);
+      height:160px;               /* CSS height; JS will scale for DPR */
+      margin: 18px auto 8px;
+      background: rgba(255,255,255,0.65);
+      border-radius: 14px;
+      box-shadow: 0 12px 28px -16px rgba(0,0,0,.35);
+    }
+
+    /* Small caption under the canvas */
+    .hint { font-size: 13px; opacity: .8; margin-top: 4px; }
+
+    /* Make the file input look decent */
+    .file {
+      display: inline-block;
+      background: #fff;
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 20px -12px rgba(0,0,0,.25);
+      border: 1px solid rgba(0,0,0,.06);
+      cursor: pointer;
+    }
+    .file input { display: none; }
   </style>
 </head>
 <body>
@@ -23,18 +50,34 @@
 
   <main class="container">
     <h1>Experimental</h1>
-    <p class="lead">Play with visuals. Toggle DJ Mode for a more energetic look.</p>
+    <p class="lead">Toggle DJ Mode for spicier visuals, then play a track to see the live sound waveform.</p>
 
-    <div class="cta">
+    <!-- Waveform -->
+    <canvas id="wave-canvas"></canvas>
+    <div class="hint">Tip: click “Choose Song” to load a file, or put a file at <code>music/demo.mp3</code> and hit Play.</div>
+
+    <!-- Controls -->
+    <div class="controls">
       <button id="djBtn" class="btn">DJ Mode</button>
+
+      <label class="file">
+        <span id="fileLabel">Choose Song</span>
+        <input id="filePicker" type="file" accept="audio/*">
+      </label>
+
+      <button id="playBtn" class="btn">Play</button>
+      <button id="pauseBtn" class="btn" style="display:none;">Pause</button>
     </div>
+
+    <!-- Hidden audio element (we control it via JS) -->
+    <audio id="player" crossorigin="anonymous" preload="auto"></audio>
   </main>
 
   <!-- Hydra synth -->
   <script src="https://unpkg.com/hydra-synth"></script>
   <script>
-    // Size canvases to pixel-perfect viewport (no 2D context on Hydra!)
-    function fitCanvas(c){
+    /* ---------- Canvas sizing helpers ---------- */
+    function fitHydraCanvas(c){
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       c.width  = Math.floor(innerWidth  * dpr);
       c.height = Math.floor(innerHeight * dpr);
@@ -43,12 +86,10 @@
     }
 
     const hydraCanvas = document.getElementById('hydra-bg');
-    fitCanvas(hydraCanvas);
-    addEventListener('resize', () => fitCanvas(hydraCanvas));
+    fitHydraCanvas(hydraCanvas);
+    addEventListener('resize', () => fitHydraCanvas(hydraCanvas));
 
-    let isDJ = false;
-
-    // two scene presets
+    /* ---------- Hydra scenes ---------- */
     function sceneCalm(){
       const kCount = () => 4 + Math.floor(2 * Math.abs(Math.sin((window.time||0) * 0.35)));
       osc(0.9, 0.45, 4.8)
@@ -58,53 +99,180 @@
         .saturate(0.6)
         .contrast(0.85)
         .brightness(0.2)
-        .color(1.08, 1.08, 1.12) // soft pastel bias
+        .color(1.08, 1.08, 1.12)
         .out();
     }
 
     function sceneDJ(){
       const kCount = () => 5 + Math.floor(2 * Math.abs(Math.sin((window.time||0) * 0.8)));
-      osc(1.6, 0.6, 8)                    // faster osc, more motion
+      osc(1.6, 0.6, 8)
         .kaleid(kCount)
         .diff(osc(2.2, 0.5, 9))
         .modulate(osc(3.0, -0.15, 1.2))
         .saturate(1.2)
         .contrast(1.05)
         .brightness(0.1)
-        .hue( () => Math.sin((window.time||0) * 0.12) * 0.3 ) // slow hue drift
-        .color(1.25, 1.05, 0.9) // warm “club” tint
+        .hue( () => Math.sin((window.time||0) * 0.12) * 0.3 )
+        .color(1.25, 1.05, 0.9)
         .out();
     }
 
     (async () => {
       try {
         if (window.initHydra) {
-          // If Strudel is present in this page/session
           await window.initHydra({ feedStrudel: 1, canvas: hydraCanvas });
         } else {
-          // Plain Hydra instance
           const hydra = new Hydra({ canvas: hydraCanvas, detectAudio:false });
         }
-        // start calm
         sceneCalm();
       } catch (e) {
         console.warn('Hydra init failed:', e);
       }
     })();
 
-    // Button toggles
-    const btn = document.getElementById('djBtn');
-    btn.addEventListener('click', () => {
+    /* ---------- Web Audio: waveform visualizer ---------- */
+    const audioEl   = document.getElementById('player');
+    const fileInput = document.getElementById('filePicker');
+    const fileLabel = document.getElementById('fileLabel');
+    const playBtn   = document.getElementById('playBtn');
+    const pauseBtn  = document.getElementById('pauseBtn');
+
+    const waveCanvas = document.getElementById('wave-canvas');
+    const wCtx = waveCanvas.getContext('2d');
+
+    // scale waveform canvas to device pixel ratio for crisp lines
+    function fitWaveCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cssW = Math.min(720, innerWidth * 0.92);
+      const cssH = 160;
+      waveCanvas.width  = Math.floor(cssW * dpr);
+      waveCanvas.height = Math.floor(cssH * dpr);
+      waveCanvas.style.width  = cssW + 'px';
+      waveCanvas.style.height = cssH + 'px';
+      wCtx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    fitWaveCanvas();
+    addEventListener('resize', fitWaveCanvas);
+
+    let audioCtx, srcNode, analyser, dataArray, rafId;
+    let isDJ = false;
+
+    function ensureAudioGraph(){
+      if (audioCtx) return;
+      audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+      srcNode   = audioCtx.createMediaElementSource(audioEl);
+      analyser  = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;            // higher = smoother waveform
+      const bufferLen = analyser.frequencyBinCount; // 1024
+      dataArray = new Uint8Array(bufferLen);
+      // Connect graph: <audio> -> analyser -> speakers
+      srcNode.connect(analyser);
+      analyser.connect(audioCtx.destination);
+    }
+
+    function drawWave(){
+      analyser.getByteTimeDomainData(dataArray);
+      const w = waveCanvas.width;
+      const h = waveCanvas.height;
+
+      // clear bg
+      wCtx.clearRect(0,0,w,h);
+
+      // subtle glass panel
+      wCtx.fillStyle = 'rgba(255,255,255,0.65)';
+      wCtx.fillRect(0,0,w,h);
+
+      // draw center baseline
+      wCtx.beginPath();
+      wCtx.moveTo(0, h/2);
+      wCtx.lineTo(w, h/2);
+      wCtx.strokeStyle = 'rgba(0,0,0,0.10)';
+      wCtx.lineWidth = 1;
+      wCtx.stroke();
+
+      // waveform path
+      wCtx.beginPath();
+      const slice = w / dataArray.length;
+      for (let i=0; i<dataArray.length; i++){
+        const v = dataArray[i] / 128.0;       // 0..2
+        const y = (v * h/2);                  // center at h/2
+        const x = i * slice;
+        if (i === 0) wCtx.moveTo(x,y); else wCtx.lineTo(x,y);
+      }
+      wCtx.lineWidth = 2.2;
+      wCtx.strokeStyle = 'rgba(236,72,153,0.95)'; // pink line
+      wCtx.stroke();
+
+      rafId = requestAnimationFrame(drawWave);
+    }
+
+    function startViz(){
+      if (!audioCtx) ensureAudioGraph();
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(drawWave);
+    }
+    function stopViz(){
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      // keep last frame visible; clear if you prefer:
+      // wCtx.clearRect(0,0,waveCanvas.width, waveCanvas.height);
+    }
+
+    // Load a default file if present (optional)
+    // Put a file at music/demo.mp3 if you want this to just work on Play.
+    audioEl.src = 'music/demo.mp3';
+
+    // File picker
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      audioEl.src = url;
+      fileLabel.textContent = f.name.length > 26 ? f.name.slice(0,23) + '…' : f.name;
+      // Reset UI
+      pauseBtn.style.display = 'none';
+      playBtn.style.display  = 'inline-block';
+    });
+
+    // Play/Pause handlers
+    playBtn.addEventListener('click', async () => {
+      try {
+        ensureAudioGraph();
+        await audioEl.play();
+        startViz();
+        playBtn.style.display  = 'none';
+        pauseBtn.style.display = 'inline-block';
+      } catch (e) {
+        console.warn('Play failed (user gesture or src missing):', e);
+      }
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      audioEl.pause();
+      stopViz();
+      pauseBtn.style.display = 'none';
+      playBtn.style.display  = 'inline-block';
+    });
+
+    // If audio ends, stop viz and reset buttons
+    audioEl.addEventListener('ended', () => {
+      stopViz();
+      pauseBtn.style.display = 'none';
+      playBtn.style.display  = 'inline-block';
+    });
+
+    /* ---------- DJ Mode toggle ---------- */
+    const djBtn = document.getElementById('djBtn');
+    djBtn.addEventListener('click', () => {
       isDJ = !isDJ;
       if (isDJ) {
         sceneDJ();
-        btn.textContent = 'DJ Mode: ON';
+        djBtn.textContent = 'DJ Mode: ON';
       } else {
         sceneCalm();
-        btn.textContent = 'DJ Mode';
+        djBtn.textContent = 'DJ Mode';
       }
     });
   </script>
 </body>
 </html>
-
